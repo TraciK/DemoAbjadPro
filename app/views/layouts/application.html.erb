@@ -9,75 +9,58 @@
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     
-    <!-- Arabic font support -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
     
-    <style>
-      .arabic-text {
-        font-family: 'Noto Sans Arabic', sans-serif;
-        font-size: 2.5rem;
-        text-align: center;
-        direction: rtl;
-      }
-      
-      .practice-container {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 2rem;
-        text-align: center;
-      }
-      
-      .letter-display {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        border-radius: 12px;
-        padding: 3rem;
-        margin: 2rem 0;
-      }
-      
-      .input-section {
-        margin: 2rem 0;
-      }
-      
-      .answer-input {
-        font-size: 1.25rem;
-        padding: 0.75rem;
-        border: 2px solid #ced4da;
-        border-radius: 8px;
-        text-align: center;
-        width: 200px;
-      }
-      
-      .submit-btn {
-        background: #007bff;
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        border-radius: 8px;
-        margin-left: 1rem;
-        cursor: pointer;
-      }
-      
-      .feedback {
-        margin: 1rem 0;
-        padding: 1rem;
-        border-radius: 8px;
-        font-weight: 500;
-      }
-      
-      .feedback.correct {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-      }
-      
-      .feedback.incorrect {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-      }
-    </style>
+    .alert {
+  padding: 1rem;
+  margin: 1rem auto;
+  max-width: 600px;
+  border-radius: 4px;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.auth-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
   </head>
 
   <body>
@@ -90,127 +73,26 @@
             Score: <%= current_user.total_score %> |
             <%= link_to "Logout", logout_path, method: :delete %>
           </div>
+        <% else %>
+          <div class="auth-links">
+            <%= link_to "Login", login_path %> | 
+            <%= link_to "Sign Up", register_path %>
+          </div>
         <% end %>
       </div>
     </nav>
     
-<% if notice %>
-  <div class="alert alert-success"><%= notice %></div>
-<% end %>
-
-<% if alert %>
-  <div class="alert alert-danger"><%= alert %></div>
-<% end %>
-
+    <!-- Flash messages -->
+    <% if notice %>
+      <div class="alert alert-success"><%= notice %></div>
+    <% end %>
+    
+    <% if alert %>
+      <div class="alert alert-danger"><%= alert %></div>
+    <% end %>
+    
     <main>
       <%= yield %>
     </main>
   </body>
 </html>
-
-<!-- app/views/practice/show.html.erb -->
-<div class="practice-container">
-  <div class="progress-bar">
-    <div class="progress" style="width: <%= (@session_stats[:correct] / [@session_stats[:total], 1].max.to_f * 100).round %>%"></div>
-  </div>
-  
-  <div class="session-stats">
-    Session: <%= @session_stats[:correct] %>/<%= @session_stats[:total] %> correct
-    <% if @session_stats[:accuracy] > 0 %>
-      (<%= (@session_stats[:accuracy] * 100).round %>% accuracy)
-    <% end %>
-  </div>
-
-  <div class="letter-display">
-    <div class="arabic-text" data-letter-id="<%= @current_letter.id %>">
-      <%= @current_letter.letter %>
-    </div>
-    
-    <% if @current_letter.initial_form.present? %>
-      <div class="letter-forms">
-        <small>Forms: <%= @current_letter.isolated_form %> | <%= @current_letter.initial_form %> | <%= @current_letter.medial_form %> | <%= @current_letter.final_form %></small>
-      </div>
-    <% end %>
-  </div>
-
-  <div class="input-section">
-    <input type="text" id="answer-input" class="answer-input" placeholder="Enter transliteration" autocomplete="off" autofocus>
-    <button id="submit-btn" class="submit-btn">Check</button>
-  </div>
-  
-  <div id="feedback" class="feedback" style="display: none;"></div>
-  
-  <div class="hint-section">
-    <button id="hint-btn" class="btn-secondary">Show Hint</button>
-    <div id="hint" style="display: none;">
-      This letter is called "<%= @current_letter.name %>"
-    </div>
-  </div>
-</div>
-
-<script>
-  const answerInput = document.getElementById('answer-input');
-  const submitBtn = document.getElementById('submit-btn');
-  const feedback = document.getElementById('feedback');
-  const letterId = document.querySelector('.arabic-text').dataset.letterId;
-  let startTime = Date.now();
-
-  function checkAnswer() {
-    const response = answerInput.value.trim();
-    if (!response) return;
-    
-    const responseTime = Date.now() - startTime;
-    
-    fetch('/practice/check', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-      },
-      body: JSON.stringify({
-        letter_id: letterId,
-        response: response,
-        response_time: responseTime
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      showFeedback(data);
-      setTimeout(() => {
-        if (data.correct) {
-          window.location.href = data.next_letter_url;
-        } else {
-          resetForNextAttempt();
-        }
-      }, 2000);
-    });
-  }
-
-  function showFeedback(data) {
-    feedback.style.display = 'block';
-    if (data.correct) {
-      feedback.className = 'feedback correct';
-      feedback.textContent = 'Correct! Well done!';
-    } else {
-      feedback.className = 'feedback incorrect';
-      feedback.textContent = `Incorrect. The answer is "${data.correct_answer}". Try again!`;
-    }
-  }
-
-  function resetForNextAttempt() {
-    answerInput.value = '';
-    answerInput.focus();
-    feedback.style.display = 'none';
-    startTime = Date.now();
-  }
-
-  submitBtn.addEventListener('click', checkAnswer);
-  answerInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') checkAnswer();
-  });
-
-  // Hint functionality
-  document.getElementById('hint-btn').addEventListener('click', () => {
-    document.getElementById('hint').style.display = 'block';
-  });
-</script>

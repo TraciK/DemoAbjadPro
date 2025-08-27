@@ -2,13 +2,22 @@ class SessionsController < ApplicationController
   skip_before_action :authenticate_user!, only: [:new, :create]
   
   def new
-    # Login form
+    # Login form - no params needed here
   end
   
   def create
-    user = User.find_by(email: params[:email].downcase)
+    email = params[:email]&.downcase
+    password = params[:password]
     
-    if user && user.authenticate(params[:password])
+    if email.blank? || password.blank?
+      flash.now[:alert] = 'Please enter both email and password'
+      render :new
+      return
+    end
+    
+    user = User.find_by(email: email)
+    
+    if user && user.authenticate(password)
       session[:user_id] = user.id
       redirect_to root_path, notice: 'Welcome back!'
     else
@@ -16,7 +25,7 @@ class SessionsController < ApplicationController
       render :new
     end
   end
-
+  
   def destroy
     session[:user_id] = nil
     redirect_to login_path, notice: 'Logged out successfully'
